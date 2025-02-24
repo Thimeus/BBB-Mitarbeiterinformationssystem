@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Willkommen an Bord - Interaktive Mappe</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600&display=swap" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        /* Modernes CSS mit Corporate Design */
+        :root {
+            --primary: #e67e22;       /* Orange (BBB) */
+            --secondary: #f8f9fa;    /* Hellgrau/Weißlich */
+            --text-color: #495057;    /* Dunkelgrau */
+            --accent: #3498db;       /* Akzent (Blau) */
+            --box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            --border-radius: 0.5rem;
+            --transition-duration: 0.2s;
+            --header-height: 80px; /* Höhe des Headers */
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            margin: 0;
+            color: var(--text-color);
+            background-color: #fff;
+            line-height: 1.6;
+        }
+
+        #header {
+            background: white;
+            height: var(--header-height);
+            position: sticky;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: space-between; /* Distribute space between logo and text */
+            padding: 0 2rem;
+            box-shadow: var(--box-shadow);
+        }
+
+        #header img {
+            max-height: calc(var(--header-height) - 20px); /* Logohöhe anpassen */
+            margin-right: 0; /* Removed margin-right */
+        }
+
+        #header h1 {
+            margin-left: 1rem; /* Add a little space between logo and text */
+        }
+
+        #container {
+            display: grid;
+            grid-template-columns: 800px 100fr;
+            grid-template-rows: var(--header-height) auto; /* Header + Content */
+            min-height: 100vh;
+        }
+
+        #sidebar {
+            background: var(--secondary);
+            padding: 2rem;
+            border-right: 1px solid var(--primary);
+            box-shadow: var(--box-shadow);
+            z-index: 100;
+            position: relative;
+            grid-column: 1;
+            grid-row: 2 / -1;
+            height: calc(100vh - var(--header-height));  /* Sidebar Höhe - Header*/
+            overflow-y: auto; /*Scrollen erlauben, falls nötig*/
+        }
+
+        #content {
+            padding: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+            opacity: 0; /* Anfangs unsichtbar */
+            transform: translateY(20px); /* Anfangs leicht nach unten verschoben */
+            transition: opacity var(--transition-duration), transform var(--transition-duration); /* Sanfte Übergänge */
+            grid-column: 2;
+            grid-row: 2 / -1;
+        }
+
+        #content.loaded {
+            opacity: 1; /* Nach dem Laden sichtbar */
+            transform: translateY(0); /* Nach dem Laden an der richtigen Position */
+        }
+
+        .search-box {
+            margin-bottom: 1.5rem;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--primary);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            transition: border-color var(--transition-duration), box-shadow var(--transition-duration);
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25); /* Subtiler Fokus-Effekt */
+        }
+
+        .topic-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .topic-item {
+            padding: 0.75rem 1rem;
+            margin: 0.5rem 0;
+            cursor: pointer;
+            transition: background-color var(--transition-duration), color var(--transition-duration);
+            border-radius: var(--border-radius);
+            user-select: none;
+        }
+
+        .topic-item:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        h2 {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: color var(--transition-duration);
+        }
+
+        a:hover {
+            text-decoration: underline;
+            color: darken(var(--accent), 10%);
+        }
+
+        .back-to-top {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            background: var(--primary);
+            color: white;
+            padding: 0.5rem 0.75rem;
+            cursor: pointer;
+            border-radius: var(--border-radius);
+            display: none;
+            transition: opacity var(--transition-duration);
+        }
+
+        .back-to-top:hover {
+            opacity: 0.8;
+        }
+
+        /* Media Query für kleinere Bildschirme */
+        @media (max-width: 768px) {
+            #container {
+                grid-template-columns: 1fr;
+            }
+
+            #sidebar {
+                border-right: none;
+                border-bottom: 1px solid var(--primary);
+                height: auto; /* Entferne feste Höhe auf kleinen Bildschirmen */
+                overflow-y: visible; /* Kein Scrollen mehr */
+            }
+
+            #content {
+                padding: 1rem;
+            }
+        }
+
+        /* Animations */
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="container">
+        <div id="header">
+            <img src="https://github.com/Thimeus/BBB/blob/d32c0bc3281018aab513faee2fe0b69a736e00e7/logo_bbb_1.png?raw=true" alt="BBB Logo">
+            <h1>Willkommen an Bord!</h1>
+        </div>
+
+        <div id="sidebar">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Thema suchen...">
+            </div>
+            <ul class="topic-list" id="topicList"></ul>
+        </div>
+
+        <div id="content">
+            <p>Diese interaktive Mappe soll Ihnen den Einstieg bei der BERUFLICHEN BILDUNG BREMERHAVEN GmbH erleichtern.</p>
+            <p>Nutzen Sie die Suchfunktion oder die Themenliste, um die gewünschten Informationen zu finden.</p>
+        </div>
+    </div>
+
+    <div class="back-to-top" id="backToTop">↑ Nach oben</div>
+
+<script>
+$(document).ready(function() {
+    const topics = [
+        {
+            "title": "Einleitung",
+            "content": `<h2>Willkommen an Bord!</h2>
+                <p>Guten Tag,</p>
+                <p>wir freuen uns sehr, Sie heute in der BERUFLICHEN BILDUNG BREMERHAVEN GmbH begrüßen zu dürfen!</p>
+                <p>Die Willkommensmappe gibt Ihnen einen ersten Überblick über das Projektspektrum der BERUFLICHEN BILDUNG BREMERHAVEN GmbH - BBB -, beinhaltet Kontaktlisten, Musterformulare, Informationen über Zuständigkeiten im Haus, über Bestellmöglichkeiten, kurz: Wissenswertes über Ihren neuen beruflichen Alltag.</p>
+                <p>Auch eine digitale Variante wird in Kürze verfügbar sein. Bis dahin haben wir eine Linksammlung auf dem Server hinterlegt, über die Sie an alle relevanten Verzeichnisse/Dokumente gelangen können.</p>
+                <p>Die Willkommensmappe soll Ihnen den Einstieg erleichtern und eine erste Orientierung geben. Ganz unabhängig davon, stehen Ihnen selbstverständlich Ihre Teamkolleg:innen zur Verfügung. Auch meine Tür steht Ihnen jederzeit offen.</p>
+                <p>Wir wünschen Ihnen einen guten Start in unserem Hause und freuen uns auf eine gute und vertrauensvolle Zusammenarbeit.</p>
+                <p>Willkommen an Bord!</p>
+                <p>Andreas Nowacki<br>Geschäftsführer</p>
+                <p>Revisionsstand: 21. Januar 2025</p>`
+        },
+        {
+            "title": "Abgeltung von Mehrarbeit",
+            "content": `<h2>Abgeltung von Mehrarbeit</h2>
+                <p>Überstunden sind generell nicht gewünscht und sind, sofern nicht anders möglich, im Vorfeld durch die Projektleitung zu beantragen. "Mehrarbeit" (max. 10 Zeitstunden) kann STUNDENWEISE (in jeweiliger Absprache mit der Projektleitung) abgegolten werden. Tageweiser Abbau von Mehrarbeitszeit ist nicht möglich!</p>`
+        },
+        {
+            "title": "Arbeitnehmervertretung im Aufsichtsrat",
+            "content": `<h2>Arbeitnehmervertretung im Aufsichtsrat</h2>
+                <p>Die Arbeitnehmervertretung der BBB (Herr Mirco GRIEMSMANN [<a href="mailto:mgriemsmann@bb-bremerhaven.de">mgriemsmann@bb-bremerhaven.de</a>] und Frau Elke OTTO [<a href="mailto:eotto@bb-bremerhaven.de">eotto@bb-bremerhaven.de</a>]) nehmen an den Aufsichtsratssitzungen der Gesellschaft teil und vertreten dort die Belange der Arbeitnehmer. Die Wahl der Arbeitnehmervertretung findet alle 4 Jahre statt.</p>`
+        },
+        {
+            "title": "Arbeitsförderungs-Zentrum im Lande Bremen GmbH",
+            "content": `<h2>Arbeitsförderungs-Zentrum im Lande Bremen GmbH</h2>
+                <p>Das Arbeitsförderungs-Zentrum im Lande Bremen GmbH (afz) ist unsere Muttergesellschaft. Sitz des afz ist der Erich-Koch-Weser-Platz 1, 27568 Bremerhaven.</p>`
+        },
+        {
+            "title": "Arbeitsunfähigkeit",
+            "content": `<h2>Arbeitsunfähigkeit</h2>
+                <p>Siehe K - Krankmeldung</p>`
+        },
+        {
+            "title": "Arbeitsunfall",
+            "content": `<h2>Arbeitsunfall</h2>
+                <p>Sollten Sie einen Arbeits- oder Wegeunfall erleiden (u. a. auf dem direkten Weg zur Arbeit bzw. nach Hause oder während der Arbeitszeit), sind Sie über die BBB unfallversichert. Eine Unfallanzeige hat unverzüglich zu erfolgen. Ansprechpartner ist Herr Patrick WORBS (Fon: 0471/3095 1517, E-Mail: <a href="mailto:pworbs@bb-bremerhaven.de">pworbs@bb-bremerhaven.de</a>).</p>`
+        },
+        {
+            "title": "Arbeitszeit",
+            "content": `<h2>Arbeitszeit</h2>
+                <p>Die wöchentliche Arbeitszeit ist im Arbeitsvertrag festgelegt.</p>
+                <p>Die Verteilung der Arbeitszeit (Beginn und Ende) ist mit dem jeweiligen Bereich abzustimmen und wird in die Zeitwertkarte (siehe Z – ZEITWERTKARTE) eingetragen.</p>
+                <p>Die Präsenzzeit in der Verwaltung ist werktags von 9 Uhr bis 15 Uhr.</p>`
+        },
+        {
+            "title": "AuRes - Das Restaurant für Aus- & Weiterbildung",
+            "content": `<h2>AuRes - Das Restaurant für Aus- & Weiterbildung der BERUFLICHEN BILDUNG BREMERHAVEN GmbH</h2>
+                <p>Im AuRes haben die Mitarbeiter:innen der BBB die Möglichkeit, zu essen. Neben einer regulären Speisekarte gibt einen täglich wechselnden Mittagstisch zum Personalpreis.</p>
+                <p>Informationen zur aktuellen Speisenkarte finden Sie unter <a href="www.aures-bremerhaven.de">www.aures-bremerhaven.de</a></p>
+                <p>Bitte vor der Bestellung darauf hinweisen, dass Sie Mitarbeiter:in der BBB sind!</p>`
+        },
+         {
+            "title": "Aufsichtsrat",
+            "content": `<h2>Aufsichtsrat</h2>
+                <p>Der Aufsichtsrat der BBB tagt einmal pro Quartal. Er umfasst 12 Mitglieder. Vorsitzender des Aufsichtsrats ist Herr Stadtrat Martin GÜNTHNER.</p>`
+        },
+        {
+            "title": "Ansprechpartner:innen",
+            "content": `<h2>Ansprechpartner:innen</h2>
+                <p>Siehe T - Telefonliste <br> Siehe O - Organigramme</p>`
+        },
+        {
+            "title": "Arbeitssicherheit",
+            "content": `<h2>Arbeitssicherheit</h2>
+                <p>Jeder Standort der BBB verfügt über eine:n Sicherheitsbeauftragte:n.</p>
+                <p>Alle Mitarbeiter:innen erhalten zeitnah nach ihrer Einstellung eine Arbeitssicherheitsunterweisung, die jährlich wiederholt wird.</p>`
+        },
+        {
+            "title": "Berufliche Bildung Bremerhaven GmbH",
+            "content": `<h2>Berufliche Bildung Bremerhaven GmbH</h2>
+                <p>Die BERUFLICHE BILDUNG BREMERHAVEN GmbH ist einer der großen regionalen Anbieter von Aus- und Weiterbildung und seit Jahrzehnten in Bremerhaven aktiv. Zu ihrem Aufgabenspektrum gehören Berufsvorbereitung, Erstausbildung und Umschulung, Qualifizierung, Maßnahmen zur Aktivierung und beruflichen Eingliederung in verschiedenen Bereichen sowie Firmenschulungen.</p>
+                <p>Die BERUFLICHE BILDUNG BREMERHAVEN GmbH führt Maßnahmen und Projekte durch, die u.a. aus Mitteln der Bundesagentur für Arbeit, der regionalen Jobcenter, des Magistrats der Stadt Bremerhaven sowie von der Senatorin für Wirtschaft, Arbeit und Europa aus Mitteln des Europäischen Sozialfonds (ESF), des Europäischen Fonds für regionale Entwicklung (EFRE) und des Landes Bremen gefördert werden.</p>
+                <p>Die BERUFLICHE BILDUNG BREMERHAVEN GmbH bietet außerdem Qualifizierungen für regionale Beschäftigungsträger an und beteiligt sich an stadtteilbezogenen Projekten.</p>
+                <p>Die BERUFLICHE BILDUNG BREMERHAVEN GmbH verfügt neben dem Firmensitz über 7 zertifizierte firmeneigene Standorte. Zudem führen wir an 3 weiteren Standorten in Trägerkooperation Maßnahmen und Projekte durch.</p>
+                <p>Die BERUFLICHE BILDUNG BREMERHAVEN GmbH ist eine Tochtergesellschaft der Arbeitsförderungs-Zentrum im Lande Bremen GmbH.</p>
+                <p>Die BERUFLICHE BILDUNG BREMERHAVEN GmbH ist ein nach dem Recht der Arbeitsförderung (AZAV) zugelassener und zertifizierter Träger und verfügt über ein Qualitätsmanagement nach DIN EN ISO 9001:2015.</p>`
+        },
+         {
+            "title": "Betriebsarzt",
+            "content": `<h2>Betriebsarzt</h2>
+                <p>Carsten WILKENS <br> Riedemannstraße 1 <br>27572 Bremerhaven <br> Fon: 0471/30946133</p>`
+        },
+         {
+            "title": "Betriebsrat",
+            "content": `<h2>Betriebsrat</h2>
+                <p>Der Betriebsrat der BBB ist über die E-Mail Adresse <a href="mailto:betriebsrat@bb-bremerhaven.de">betriebsrat@bb-bremerhaven.de</a> erreichbar. Vorsitzender: Mirco GRIEMSMANN, stellvertretender Vorsitzender: Simon PUSTELNIK <br> Sprechzeiten: dienstags 14.30 Uhr - 16.00 Uhr in den ungeraden Kalenderwochen im Büro des Betriebsrats: Rickmersstraße 76, 27568 Bremerhaven (Zugang über van-Heukelum-Straße 1) oder jederzeit nach Vereinbarung.</p>
+                <p>Die Wahlperiode umfasst regulär vier Jahre. Der Betriebsrat hat aktuell 5 Mitglieder.</p>`
+        },
+         {
+            "title": "Betriebsvereinbarungen",
+            "content": `<h2>Betriebsvereinbarungen</h2>
+                <p>Folgende Betriebsvereinbarungen wurden geschlossen und können unter V: > Schwarzes Brett > Betriebsvereinbarungen eingesehen werden:</p>
+                <ul>
+                  <li>Mobiles Arbeiten (vom 15. September 2021)</li>
+                  <li>Vergütungsordnung 2023/2024 (13. Dezember 2022)</li>
+                  <li>Betriebliches Eingliederungsmanagement (10. Januar 2023)</li>
+                  <li>Fairness und Gleichbehandlung (11. April 2023)</li>
+                  <li>Betriebsvereinbarung über den Umgang mit Suchtkranken oder Suchtgefährdeten in der BERUFLICHEN BILDUNG BREMERHAVEN GmbH (04. November 2024)</li>
+                </ul>`
+        },
+         {
+            "title": "Betriebsversammlung",
+            "content": `<h2>Betriebsversammlung</h2>
+                <p>Betriebsversammlungen finden regelmäßig im Jahr auf Einladung des Betriebsrates statt.</p>`
+        },
+         {
+            "title": "Bildungszeit",
+            "content": `<h2>Bildungszeit</h2>
+                <p>Mitarbeiter:innen der BBB haben die Möglichkeit, nach den Bestimmungen des Bremischen Bildungszeitgesetzes (BremBZG) Bildungszeit in Anspruch zu nehmen.</p>
+                <p>Für weitere Informationen (u. a. Beantragung von Bildungszeit) erteilt die Verwaltungsleitung (Frau Angela TÖDTER-KERN, Fon: 0471/3095 1511, E-Mail: <a href="mailto:atoedter-kern@bb-bremerhaven.de">atoedter-kern@bb-bremerhaven.de</a>) Auskunft.</p>`
+        },
+         {
+            "title": "Buchhaltung",
+            "content": `<h2>Buchhaltung</h2>
+                <p>Die Buchhaltung (Lohn- & Gehalts- sowie Finanzbuchhaltung) befindet sich am Standort Rudloffstraße 22, 27568 Bremerhaven. Termine bitte vorab per Mail (E-Mail: <a href="mailto:buchhaltung@bb-bremerhaven.de">buchhaltung@bb-bremerhaven.de</a>) abstimmen.</p>
+                <p>Die Buchhaltung ist nur nach Terminvereinbarung aufzusuchen. E-Mail: <a href="mailto:buchhaltung@bb-bremerhaven.de">buchhaltung@bb-bremerhaven.de</a></p>`
+        },
+         {
+            "title": "Büromaterial",
+            "content": `<h2>Büromaterial</h2>
+                <p>Das Büromaterial wird zentral für alle Bereiche von der Verwaltung der BBB bestellt.</p>
+                <p>Die Bestellungen erfolgen regelmäßig. Die Bedarfe sind der Verwaltung (Frau Nicole ALLERHEILIGEN, E-Mail: <a href="mailto:nallerheiligen@bb-bremerhaven.de">nallerheiligen@bb-bremerhaven.de</a>) per E-Mail aufzugeben.</p>`
+        },
+         {
+            "title": "Datenschutz",
+            "content": `<h2>Datenschutz</h2>
+                <p>Bereits im Rahmen der Einstellung erfolgt anhand des Merkblattes zum Datenschutz eine Belehrung auf der Grundlage der datenschutzrechtlichen Bestimmungen nach der Datenschutzgrundverordnung. Darüber hinaus informiert die BBB neue Mitarbeiter:innen über die Modalitäten der Erhebung und Verarbeitung personenbezogener Daten der Beschäftigten.</p>`
+        },
+         {
+            "title": "Dienstreisen",
+            "content": `<h2>Dienstreisen</h2>
+                <p>Dienstreisen sind rechtzeitig vor Antritt mit der jeweiligen Projektleitung abzustimmen. Die Geschäftsführung hat die Dienstreise schriftlich zu genehmigen. Das Antragsformular ist auf dem Server hinterlegt: V:> QM_Handbuch_PB_interne Formulare > Interne Formulare > Verw Personal SB > 04_Dienstreiseantrag</p>`
+        },
+         {
+            "title": "EDV Support",
+            "content": `<h2>EDV Support</h2>
+                <p>Der EDV Support (First Level Support) wird durch Frau Nicole ALLERHEILGEN durchgeführt (Fon: 0471/3095 1516, E-Mail: <a href="mailto:nallerheiligen@bb-bremerhaven.de">nallerheiligen@bb-bremerhaven.de</a>). Weitergehende EDV Unterstützung (weiterreichende Problembehebung, Installation von Software, etc.) erledigt die Firma Login.</p>
+                <p>Die Kontaktaufnahme mit LogIn erfolgt durch Herrn Patrick WORBS (Fon: 0471/3095 1517, E-Mail: <a href="mailto:pworbs@bb-bremerhaven.de">pworbs@bb-bremerhaven.de</a>).</p>`
+        },
+         {
+            "title": "Erholungsurlaub",
+            "content": `<h2>Erholungsurlaub</h2>
+                <p>Siehe U - URLAUB</p>`
+        },
+        {
+            "title": "Erste Hilfe",
+            "content": `<h2>Erste Hilfe</h2>
+                <p>An allen Standorten der BBB gibt es Ersthelfer:innen, zu erkennen an dem Erste-Hilfe-Schild an der jeweiligen Bürotür. Jährlich finden Erste-Hilfe-Lehrgänge statt, die Teilnahme daran ist ausdrücklich erwünscht!</p>`
+        },
+        {
+            "title": "Fahrzeuge",
+            "content": `<h2>Fahrzeuge</h2>
+                <p>Den Mitarbeiter:innen der BBB steht eine Anzahl an firmeneigenen Fahrzeugen zur betrieblichen Nutzung zur Verfügung. Die Buchung eines Firmenfahrzeugs erfolgt über Frau Nicole ALLERHEILIGEN. (Fon: 0471/3095 1517, E-Mail: <a href="mailto:nallerheiligen@bb-bremerhaven.de">nallerheiligen@bb-bremerhaven.de</a>)</p>
+                <p>Alle Mitarbeiter:innen, die Firmenfahrzeuge führen möchten, haben vorab eine Kopie ihrer gültigen Fahrerlaubnis in der Verwaltung (Frau Angela TÖDTER-KERN, Fon: 0471/3095 1511, E-Mail: <a href="mailto:atoedter-kern@bb-bremerhaven.de">atoedter-kern@bb-bremerhaven.de</a>) abzugeben.</p>
+                <p>Sollte eine Dienstfahrt erforderlich sein und steht kein Firmenfahrzeug zur Verfügung, besteht die Möglichkeit, das privateigene KFZ zu nutzen. In diesem Fall ist das private KFZ im Schadensfall durch den Kommunalen Schadensausgleich (KSA) Vollkasko versichert.</p>`
+        },
+        {
+            "title": "Fahrtkosten",
+            "content": `<h2>Fahrtkosten</h2>
+                <p>Fahrtkosten zu dienstlichen Terminen (dies gilt auch bei Nutzung des privaten KFZ) werden auf Antrag erstattet.</p>
+                <p>Die Höhe der Erstattung richtet sich nach den Bestimmungen des Bremischen Reisekostengesetzes, bei Nutzung von privaten PKW für dienstliche Fahrten werden aktuell (Stand: 09.06.2022) 30ct /km erstattet.</p>`
+        },
+        {
+            "title": "Ferienbetreuung",
+            "content": `<h2>Ferienbetreuung</h2>
+                <p>Kinder von Mitarbeiter:innen im Alter zwischen 6 und 12 Jahren können ggf. auf Antrag an der Sommerferienbetreuung des Magistrats der Stadt Bremerhaven teilnehmen.</p>`
+        },
+        {
+            "title": "Fitness",
+            "content": `<h2>Fitness</h2>
+                <p>siehe S - SPORT</p>`
+        },
+        {
+            "title": "Fortbildung",
+            "content": `<h2>Fortbildung</h2>
+                <p>siehe W - WEITERBILDUNG</p>`
+        },
+        {
+            "title": "Gehaltsabrechnung",
+            "content": `<h2>Gehaltsabrechnung</h2>
+                <p>Seit der Gehaltsabrechnung 01/2025 werden die Dokumente ausschließlich in digitaler Form zur Verfügung gestellt. Zu finden im Portal Lexware MyCenter.</p>
+                <p>siehe L - LEXWARE MYCENTER</p>
+                <p>Rückfragen zu Ihrer Gehaltsabrechnung richten Sie bitte per Mail an die Buchhaltung unter <a href="mailto:buchhaltung@bb-bremerhaven.de">buchhaltung@bb-bremerhaven.de</a></p>`
+        },
+         {
+            "title": "Hansefit",
+            "content": `<h2>Hansefit</h2>
+                <p>Mitarbeiter:innen der BBB erhalten auf Antrag Zugang zum Hansefit BEST Programm. Es ist aktuell (Stand: Januar 2025) eine monatliche Zuzahlung in Höhe von 26,25 € erforderlich. Dies wird von der Vergütung abgezogen. Weitere Informationen dazu erhalten Sie in der Buchhaltung unter <a href="mailto:buchhaltung@bb-bremerhaven.de">buchhaltung@bb-bremerhaven.de</a></p>
+                <p>Informationen zu den teilnehmenden Studios im Progamm Hansefit BEST erhalten Sie unter <a href="www.hansefit.de/studio-finden">www.hansefit.de/studio-finden</a></p>
+                <p>Anmeldung zu Hansefit ist bei dem Assistenten der Geschäftsführung, Herrn Patrick WORBS (E-Mail: <a href="mailto:pworbs@bb-bremerhaven.de">pworbs@bb-bremerhaven.de</a>) möglich. Eine Anmeldung ist immer zum 01. Tag eines Monats möglich und dann in der ersten Laufzeit für 12 volle Kalendermonate, danach besteht eine monatliche Austrittsmöglichkeit. Bei Verlassen der BBB wird die Mitgliedschaft am Programm Hansefit BEST automatisch nach Ablauf des Monats beendet.</p>`
+        },
+        {
+            "title": "Homeoffice",
+            "content": `<h2>Homeoffice</h2>
+                <p>siehe M - MOBILES ARBEITEN</p>`
+        },
+         {
+            "title": "Homepage",
+            "content": `<h2>Homepage</h2>
+                <p><a href="www.bb-bremerhaven.de">www.bb-bremerhaven.de</a></p>`
+        },
+         {
+            "title": "Interessensvertretung",
+            "content": `<h2>Interessensvertretung</h2>
+                <p>siehe A - ARBEITNEHMERVERTRETUNG IM AUFSICHTSRAT <br> siehe B - BETRIEBSRAT</p>`
+        },
+         {
+            "title": "Kinderbetreuung",
+            "content": `<h2>Kinderbetreuung</h2>
+                <p>siehe F - FERIENBETREUUNG</p>`
+        },
+         {
+            "title": "Krankmeldung",
+            "content": `<h2>Krankmeldung</h2>
+                <p>Im Falle einer Erkrankung ist unmittelbar vor Arbeitsbeginn die jeweilige Projektleitung sowie die Buchhaltung der BBB per E-Mail (E-Mail: <a href="mailto:buchhaltung@bb-bremerhaven.de">buchhaltung@bb-bremerhaven.de</a>) zu informieren.</p>
+                <p>Nach dem Arztbesuch ist die Dauer der Erkrankung an die Projektleitung und Buchhaltung zu melden.</p>
+                <p>Die Arbeitsunfähigkeitsbescheinigung wird seit dem 01.01.2023 elektronisch an die Krankenkasse übermittelt und durch den Arbeitgeber dort abgerufen. Die Vorlage der Arbeitsunfähigkeitsbescheinigung durch die/den Arbeitnehmer:in entfällt dadurch.</p>
+                <p>Es wird jedoch weiterhin empfohlen sich beim Arzt eine Arbeitsunfähigkeitsbescheinigung für die eigenen Unterlagen ausstellen zu lassen. Da diese jedoch sensible Daten (z.B. Diagnose, ...) enthält, ist sie jedoch nicht für die Vorlage beim Arbeitgeber geeignet.</p>`
+        },
+         {
+            "title": "Leitbild",
+            "content": `<h2>Leitbild</h2>
+                <p>Die BERUFLICHE BILDUNG BREMERHAVEN GmbH versteht sich als Ort der respektvollen Begegnung von Menschen unterschiedlicher Kulturen, unterschiedlicher Weltanschauung, unterschiedlicher Nationalitäten. Niemand wird aufgrund des Geschlechts, der ethnischen Herkunft, der Religion, der Weltanschauung, einer Behinderung, des Alters und der sexuellen Orientierung benachteiligt oder herabwürdigend behandelt. Die inhaltliche und methodische Ausgestaltung aller internen und externen Aktivitäten der BBB orientiert sich an diesem Selbstverständnis.</p>
+                <p>Dabei betrachtet es die BERUFLICHE BILDUNG BREMERHAVEN GmbH als ihre integrierte Aufgabe, bei allen Vorhaben und auf allen Ebenen der BBB auf die Chancengleichheit von Frauen und Männern hinzuwirken.</p>
+                <p>Die Kund:innen der BBB stehen stets im Mittelpunkt und alle Tätigkeiten der BBB orientieren sich an deren Bedürfnissen.</p>`
+        },
+         {
+            "title": "Lehrgänge",
+            "content": `<h2>Lehrgänge</h2>
+                <p>siehe W – Weiterbildung</p>`
+        },
+         {
+            "title": "Lexware Mycenter",
+            "content": `<h2>Lexware Mycenter</h2>
+                <p>Im Programm Lexware MyCenter werden die Anträge auf Erholungsurlaub erfasst und zur Genehmigung an die:den Vorgesetzte:n weitergeleitet.</p>
+                <p>Als Mitarbeiter:in haben Sie jederzeit die Möglichkeit die eigene Urlaubskarte einzusehen. Weiterhin erhalten Sie Ihre Teamübersicht für die Urlaubsplanung. Dort können Sie lediglich sehen ob ein:e Kolleg:in vor Ort ist oder nicht. Die Begründungen für die Abwesenheiten können lediglich autorisierte Mitarbeitende einsehen.</p>
+                <p>Im Antrags-Center haben Sie eine Übersicht über bereits eingereichte Abwesenheitsanträge.</p>
+                <p>Das Startkennwort kann beliebig geändert werden.</p>
+                <p>Die Dokumente aus der Gehaltsbuchhaltung (Gehaltsabrechnung) werden im Bereich LOHN+GEHALT als Kennwortgeschützte *.pdf Dateien zur Verfügung gestellt. Das Kennwort ist nicht änderbar! Bei Verlassen der BBB wird das Programm geschlossen. Dokumente sind rechtzeitig eigenständig zu sichern! Der Kennwortschutz kann umgangen werden, wenn Sie das Dokument über einen PDF-Drucker erneut drucken und speichern. Achten Sie immer auf den Datenschutz!</p>`
+        },
+         {
+            "title": "Mailadressen",
+            "content": `<h2>Mailadressen</h2>
+                <p>Alle Mitarbeiter:innen verfügen über eine eigene betriebliche E-Mailadresse. Diese wird von Herrn Pascal STÜBEN (E-Mail: <a href="mailto:pstueben@bb-bremerhaven.de">pstueben@bb-bremerhaven.de</a>) eingerichtet. Sollten Sie Zugang zu einem Mailverteiler (z. B. auf Projektebene) benötigen, wird dieser auch von Herrn STÜBEN eingerichtet.</p>
+                <p>Bitte achten Sie auf die korrekte Mailsignatur. Bei Rückfragen wenden Sie sich bitte an Herrn Patrick WORBS (E-Mail: <a href="mailto:pworbs@bb-bremerhaven.de">pworbs@bb-bremerhaven.de</a>).</p>
+                <p>Bei Abwesenheit aktivieren Sie bitte den Abwesenheitsagenten in Outlook oder direkt bei ALL-INKL. Die Anleitung hierzu finden Sie in der Anlage.</p>
+                <p>Der Abwesenheitstext könnte wie folgt lauten: <br>„Ich bin derzeit nicht im Hause. Nach meiner Rückkehr am xx.xx.2023 werde ich Ihre Mail unaufgefordert beantworten. Ihre Nachricht wird nicht weitergeleitet! In dringenden Angelegenheiten kontaktieren Sie bitte xxx."</p>`
+        },
+         {
+            "title": "Massnahmen",
+            "content": `<h2>Massnahmen</h2>
+                <p>siehe P - PROJEKTE</p>`
+        },
+         {
+            "title": "Mehrarbeit",
+            "content": `<h2>Mehrarbeit</h2>
+                <p>Durch die tägliche Erfassung von Arbeitsbeginn und Arbeitsende in der Zeitwertkarte wird durch Abgleich mit in den Stammdaten hinterlegten regelmäßigen täglichen Arbeitszeit der Saldo PLUS Minuten / MINUS Minuten errechnet. (siehe Ü – ÜBERSTUNDEN)</p>`
+        },
+        {
+            "title": "Mitarbeitendenbefragung",
+            "content": `<h2>Mitarbeitendenbefragung</h2>
+                <p>I.d.R. findet einmal im Jahr eine anonymisierte Mitarbeitendenbefragung in digitaler Form statt. Die Ergebnisse werden bei einer Mitarbeitendenversammlung vorgestellt.</p>`
+        },
+         {
+            "title": "Mitarbeitendenversammlung",
+            "content": `<h2>Mitarbeitendenversammlung</h2>
+                <p>I. d. R. finden Mitarbeitendenversammlungen einmal pro Jahr statt.</p>`
+        },
+        {
+            "title": "Mobiles Arbeiten",
+            "content": `<h2>Mobiles Arbeiten</h2>
+                <p>In einigen Bereichen ist Mobiles Arbeiten möglich und gem. Betriebsvereinbarung mit der Geschäftsführung vereinbart. Die Möglichkeit des Mobilen Arbeitens ist mit der Projektleitung abzustimmen. Danach ist ein schriftlicher Antrag an die Geschäftsführung zu richten.</p>`
+        },
+         {
+            "title": "Newsletter",
+            "content": `<h2>Newsletter</h2>
+                <p>Der Geschäftsführer informiert alle Mitarbeitenden i. d. R. monatlich in einem digitalen BBB Newsletter über relevante Neuerungen und personelle Veränderungen.</p>
+                <p>Die Newsletter sindunter V:> Schwarzes Brett > BBB News nachzulesen.</p>`
+        },
+         {
+            "title": "Organigramme",
+            "content": `<h2>Organigramme</h2>
+                <p>Die Organigramme finden Sie in der Anlage.</p>
+                <p>Diese Organigramme sowie das Organigramm Standorte sind auf dem Server unter V:> QM_Handbuch_PB_interne Formulare > QMH hinterlegt.</p>`
+        },
+         {
+            "title": "Pausenzeiten",
+            "content": `<h2>Pausenzeiten</h2>
+                <p>Die Pausenzeiten (Uhrzeiten) sind mit dem jeweiligen Bereich abzusprechen.</p>
+                <p>Die Zeitwertkarte rechnet automatisch 30 Minuten Mittagspause, sofern die tägliche Arbeitszeit 6 Zeitstunden überschreitet. Umfasst die Mittagspause mehr als 30 Minuten, sind Beginn und Ende der Pause in die Zeitwertkarte einzutragen.</p>
+                <p>Beträgt die Arbeitszeit mehr als 9 Zeitstunden am Tag, so ist eine weitere Pause von 15 Minuten in der Spalte „Korrektureingabe“ einzutragen.</p>
+                <p>Weitere Unterbrechungen der Arbeitszeit (z. B. Abwesenheit aufgrund eines privaten Termins) sind entsprechend einzutragen. Fragen zum Führen der Zeitwertkarte beantwortet Herr Pascal STÜBEN. (Fon: 0471/2900 2179, E-Mail: <a href="mailto:pstueben@bb-bremerhaven.de">pstueben@bb-bremerhaven.de</a>)</p>`
+        },
+         {
+            "title": "Pädagogische Konferenz (PK)",
+            "content": `<h2>Pädagogische Konferenz (PK)</h2>
+                <p>Die Pädagogische Konferenz - die Leitungskonferenz der BBB - findet monatlich statt. Teilnehmende sind der Geschäftsführer, die Koordinator*innen und Projektleitungen, die Verwaltungsleiterin sowie der Kaufmännische Leiter. Die Protokolle der PK sind auf dem Server unter V:> Protokolle PK hinterlegt und können von den Mitarbeiter:innen eingesehen werden.</p>`
+        },
+         {
+            "title": "Präambel",
+            "content": `<h2>Präambel</h2>
+                <p>Die BERUFLICHE BILDUNG BREMERHAVEN GmbH (BBB) versteht sich als Ort der respektvollen Begegnung von Menschen unterschiedlicher Kulturen, unterschiedlicher Weltanschauung, unterschiedlicher Nationalitäten. Niemand wird aufgrund des Geschlechts, der ethnischen Herkunft, der Religion, der Weltanschauung, einer Behinderung, des Alters und der sexuellen Orientierung benachteiligt oder herabwürdigend behandelt. Gewaltverherrlichende, diskriminierende, rassistische und sexistische Äußerungen und Verhaltensweisen sind zu unterlassen. In allen Bereichen der BBB wird Wert auf einen respektvollen Umgang gelegt, Konflikte sind sachlich und frei von Aggressionen zu lösen, unangemessene Verhaltensweisen werden nicht geduldet.</p>`
+        },
+         {
+            "title": "Probezeitgespräch",
+            "content": `<h2>Probezeitgespräch</h2>
+                <p>Während der sechsmonatigen Probezeit findet i.d.R. zur Hälfte der Probezeit ein Probezeitgespräch mit der Geschäftsführung statt.</p>`
+        },
+         {
+            "title": "Projekte",
+            "content": `<h2>Projekte</h2>
+                <p>Informationen zu den aktuell von der BBB durchgeführten Projekten, Maßnahmen und Bildungsangeboten können der Homepage <a href="www.bb-bremerhaven.de/unsere-Angebote">www.bb-bremerhaven.de/unsere-Angebote</a> sowie dem Qualitätsmanagementhandbuch der BBB unter V:> QM_Handbuch_PB_interne Formulare > QMH entnommen werden.</p>`
+        },
+         {
+            "title": "Qualitätsmanagement",
+            "content": `<h2>Qualitätsmanagement</h2>
+                <p>Die BBB ist ein nach DIN EN ISO 9001:2015 sowie der Anerkennungs- und Zulassungsverordnung Weiterbildung (AZAV) zertifizierter Bildungsträger.</p>
+                <p>Die QM Dokumentation (Qualitätsmanagement-Handbuch mit Anlagen, Organigramme, Prozessbeschreibungen, im Unternehmen verwendete interne Formulare, etc.) sind auf dem Server der BBB unter V:> QM_Handbuch_PB_interne Formulare > Interne Formulare hinterlegt.</p>`
+        },
+         {
+            "title": "Regelarbeitszeit",
+            "content": `<h2>Regelarbeitszeit</h2>
+                <p>siehe A - ARBEITSZEIT</p>`
+        },
+         {
+            "title": "Schliesszeiten",
+            "content": `<h2>Schliesszeiten</h2>
+                <p>In einigen Bereichen der BBB gibt es feste Schließzeiten (sog. Betriebsferien). Alle Mitarbeiter:innen des jeweiligen Bereichs haben in diesem Zeitraum Erholungsurlaub zu nehmen.</p>`
+        },
+        {
+            "title": "Social Media",
+            "content": `<h2>Social Media</h2>
+                <p>Die BBB ist auf Facebook und Instagram unter @bbbremerhaven präsent. Das Ausbildungsrestaurant AuRes ist in beiden Kanälen unter @AuResBremerhaven vertreten.</p>
+                <p>Ansprechpartner ist Herr Patrick WORBS (Fon: 0471/3095 1517, E-Mail: <a href="mailto:pworbs@bb-bremerhaven.de">pworbs@bb-bremerhaven.de</a>).</p>`
+        },
+         {
+            "title": "Sonderurlaub",
+            "content": `<h2>Sonderurlaub</h2>
+                <p>Über die Modalitäten der Gewährung von Sonderurlaub (z. B. Geburt eines Kindes, Todesfall eines engen Angehörigen, ...) informiert die Verwaltungsleitung (Frau Angela TÖDTER-KERN, Fon 0471/3095 1511, E-Mail: <a href="mailto:atoedter-kern@bb-bremerhaven.de">atoedter-kern@bb-bremerhaven.de</a>).</p>
+                <p>Sonderurlaub ist bei der Geschäftsführung (nach Kenntnisnahme durch die Projektleitung) zu beantragen und bedarf der schriftlichen Genehmigung.</p>`
+        },
+         {
+            "title": "Sport",
+            "content": `<h2>Sport</h2>
+                <p>Alle Mitarbeiter:innen haben die Möglichkeit, einen Zuschuss zum Mitgliedsbeitrag in einem Fitnessstudio oder einem Sportverein zu erhalten. Guthabenkarten (z. B. Bremerhavener Bädergesellschaft) können auch berücksichtigt werden.</p>
+                <p>Ein entsprechender Nachweis (der Mitgliedschaft bzw. der Einzahlungsquittung) ist in der Buchhaltung Lohn & Gehalt vorzulegen. Der monatliche Zuschuss ist pro Mitarbeiter:in auf 20,00 € begrenzt.</p>
+                <p>Alternativ kann am Programm Hansefit BEST teilgenommen werden (siehe H - HANSEFIT)</p>`
+        },
+         {
+            "title": "Telefonliste",
+            "content": `<h2>Telefonliste</h2>
+                <p>Die aktuelle Telefonliste ist auf dem Server der BBB unter V:> Schwarzes Brett hinterlegt.</p>
+                <p>Änderungen bitte an Herrn Pascal STÜBEN (E-Mail: <a href="mailto:pstueben@bb-bremerhaven.de">pstueben@bb-bremerhaven.de</a>) melden.</p>`
+        },
+         {
+            "title": "Unfallanzeige",
+            "content": `<h2>Unfallanzeige</h2>
+                <p>siehe A - ARBEITSUNFALL</p>`
+        },
+         {
+            "title": "Unterschrift",
+            "content": `<h2>Unterschrift</h2>
+                <p>Unterschriften sind immer mit „Im Auftrag“ zu versehen. Dies bezieht sich auf Mails ebenso wie auf Schriftstücke. Vom Geschäftsführer bestimmte Mitarbeiter:innen oder Auszubildende unterzeichnen mit „Auf Anordnung“. Kein:e Mitarbeiter:in unterzeichnet „In Vertretung"!</p>`
+        },
+         {
+            "title": "Urlaub",
+            "content": `<h2>Urlaub</h2>
+                <p>Der Urlaub ist schriftlich über das Programm Lexware MyCenter zu beantragen und muss mit der jeweiligen Projektleitung und dem Team abgesprochen sein. (Siehe L - LEXWARE MYCENTER)</p>
+                <p>Zu beachten ist, dass der Jahresurlaub aller Mitarbeiter:innen stets bis zum 31.12. eines jeden Kalenderjahres abgegolten sein muss. Eine Übertragung von Resturlaub in das neue Kalenderjahr ist nicht möglich.</p>`
+        },
+        {
+            "title": "Überstunden",
+            "content": `<h2>Überstunden</h2>
+                <p>siehe M - MEHRARBEITSZEIT</p>`
+        },
+        {
+            "title": "Vertretungsregelung",
+            "content": `<h2>Vertretungsregelung</h2>
+                <p>Der Geschäftsführer wird bei urlaubs- oder krankheitsbedingter Abwesenheit von Herrn Rainer BLÜMEL vertreten.</p>
+                <p>In allen Bereichen wird eine Vertreterregelung gem. QM Handbuch angewendet.</p>`
+        },
+         {
+            "title": "Verwaltung",
+            "content": `<h2>Verwaltung</h2>
+                <p>Die Verwaltung befindet sich in der Rudloffstraße 22, 27568 Bremerhaven, erreichbar unter Fon: +49 471/3095 150.</p>`
+        },
+        {
+            "title": "Visitenkarten",
+            "content": `<h2>Visitenkarten</h2>
+                <p>Visitenkarten erhalten die Mitarbeiter:innen über die Assistenz der Geschäftsführung (<a href="mailto:info@bb-bremerhaven.de">info@bb-bremerhaven.de</a>).</p>`
+        },
+        {
+            "title": "Website",
+            "content": `<h2>Website</h2>
+                <p>siehe H – HOMEPAGE</p>`
+        },
+        {
+            "title": "Weiterbildung",
+            "content": `<h2>Weiterbildung</h2>
+                <p>Die Geschäftsführung der BBB legt großen Wert darauf, dass alle Mitarbeiter:innen ihr Fachwissen durch die Teilnahme an internen und externen Fort- und Weiterbildungsmaßnahmen regelmäßig zu aktualisieren bzw. erweitern.</p>
+                <p>Die konkrete Umsetzung einer Teilnahme erfolgt in Absprache mit der jeweiligen Projektleitung bzw. dem Geschäftsführer.</p>`
+        },
+         {
+            "title": "Zeichnungsbefugnis",
+            "content": `<h2>Zeichnungsbefugnis</h2>
+                <p>Die Zeichnungsbefugnis hat ausschließlich der Geschäftsführer.</p>`
+        },
+         {
+            "title": "Zeiterfassung",
+            "content": `<h2>Zeiterfassung</h2>
+                <p>Die Mitarbeiter:innen der BBB haben eine Zeitwertkarte in elektronischer Form (Excel Tabelle) zu führen. Die mit den persönlichen Stammdaten versehene Datei erhalten sie zu Beginn ihrer Tätigkeit per E-Mail von der Verwaltung.</p>
+                <p>Die Datei ist monatlich jeweils bis zum 3. Arbeitstag des Folgemonats an Herrn Pascal STÜBEN (ausschließlich in elektronischer Form per E-Mail) zu übermitteln.</p>
+                <p>Bei Rückfragen steht Herr Pascal STÜBEN (E-Mail: <a href="mailto:pstueben@bb-bremerhaven.de">pstueben@bb-bremerhaven.de</a>) jederzeit zur Verfügung.</p>`
+        },
+        {
+            "title": "Zeitkonto",
+            "content": `<h2>Zeitkonto</h2>
+                <p>Die Zeitwertkarte erfasst monatlich die geleistete Arbeitszeit. Die Regelarbeitszeit darf im Rahmen eines Zeitkontingents von + / - 10 Zeitstunden im Monat über- bzw. unterschritten werden.</p>
+                <p>Bei kurzfristigen Überschreitungen dieses Zeitkontingents muss dieses zeitnah im Folgemonat ausgeglichen werden.</p>
+                <p>Zu beachten ist, dass ein Ausgleich von Mehrarbeitszeit stundenweise zu erfolgen hat, der Ausgleich durch freie Arbeitstage ist nicht gestattet.</p>`
+        }
+    ];
+
+    // Dynamische Generierung der Themenliste
+    function renderTopics(filter = '') {
+        $('#topicList').empty();
+        topics.filter(topic =>
+            topic.title.toLowerCase().includes(filter.toLowerCase())
+        ).forEach(topic => {
+            $('#topicList').append(
+                `<li class="topic-item" data-target="${topic.title}">
+                    ${topic.title}
+                 </li>`
+            );
+        });
+    }
+
+    // Initiale Darstellung
+    renderTopics();
+
+    // Suchfunktion
+    $('#searchInput').on('input', function() {
+        renderTopics($(this).val());
+    });
+
+    // Inhaltsanzeige
+    $(document).on('click', '.topic-item', function() {
+        const title = $(this).data('target');
+        const content = topics.find(t => t.title === title).content;
+        $('#content').html(content).scrollTop(0); // Inhalt einfügen und zum Anfang scrollen
+        $('#content').addClass('loaded'); // Fade-In-Effekt aktivieren
+    });
+
+    // Animation für das anfängliche Laden des Inhalts
+    $('#content').one('animationend', function() {
+        $(this).removeClass('fade-in');
+    });
+
+    // Eventuell einen Standardinhalt anzeigen
+    $('#content').html(topics[0].content).addClass('loaded');
+
+    // Zurück nach oben Button
+    $(window).scroll(function() {
+        if ($(this).scrollTop() > 200) {
+            $('#backToTop').fadeIn();
+        } else {
+            $('#backToTop').fadeOut();
+        }
+    });
+
+    $('#backToTop').click(function() {
+        $('html, body').animate({scrollTop: 0}, 300);
+    });
+});
+</script>
+</body>
+</html>
